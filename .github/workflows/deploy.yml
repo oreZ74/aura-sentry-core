@@ -2,56 +2,57 @@ name: Build and Deploy to Prod
 
 on:
   push:
-    branches: ["main"] # Triggert nur bei einem Push auf den main-Branch
-  workflow_dispatch:
+    branches: ["main"] # Triggers automatically when pushing to the main branch
+  workflow_dispatch:   # Allows manual execution via the GitHub Actions UI
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write # Erlaubt GitHub, das Docker-Image hochzuladen
+      packages: write # Grants GitHub permission to upload the Docker image to GHCR
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Log in to the Container registry
+      - name: Log in to the Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.GITHUB_USERNAME }}
+          password: ${{ secrets.CR_PAT }}
 
-      - name: Build and push Docker image
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: ghcr.io/${{ github.repository }}:latest
+          # Uses your lowercase GitHub username secret to prevent Docker registry naming errors
+          tags: ghcr.io/${{ secrets.GITHUB_USERNAME }}/aura-sentry-core:latest
 
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - name: Execute deployment via SSH
+      - name: Execute Deployment via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            # Gehe in den Ordner, wo deine docker-compose.prod.yml und .env liegen
-            cd /opt/aurasentry # <-- Pfad anpassen!
+            # Navigate to the target deployment directory on your server
+            cd /opt/aurasentry # <-- Adjust this path to match your server environment!
 
-            # Logge dich auf dem Server in die GitHub Registry ein (um das Image zu laden)
-            echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            # Authenticate your remote server daemon with the GitHub Container Registry
+            echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u ${{ secrets.GITHUB_USERNAME }} --password-stdin
 
-            # Ziehe das neueste Image
-            docker pull ghcr.io/${{ github.repository }}:latest
+            # Pull down the freshly built container image using the explicit lowercase path
+            docker pull ghcr.io/${{ secrets.GITHUB_USERNAME }}/aura-sentry-core:latest
 
-            # Starte den Container neu (Postgres läuft ungestört weiter)
+            # Gracefully restart the app service container (database remains unaffected)
             docker compose -f docker-compose.prod.yml up -d app
 
-            # Räume alte, ungenutzte Images auf
+            # Housekeeping: Purge dangling, unreferenced legacy build fragments to reclaim storage space
             docker image prune -f
