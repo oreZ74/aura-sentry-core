@@ -1,0 +1,34 @@
+networks:
+  aura-net:
+
+services:
+  postgres:
+    networks:
+      - aura-net
+
+  app:
+    image: ghcr.io/${GITHUB_REPOSITORY}:latest
+    build: .
+    container_name: aurasentry-app
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      _JAVA_OPTIONS: "-Djava.net.preferIPv4Stack=true"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      AZURE_CLIENT_ID: ${AZURE_CLIENT_ID}
+      AZURE_CLIENT_SECRET: ${AZURE_CLIENT_SECRET}
+      AZURE_TENANT_ID: ${AZURE_TENANT_ID}
+      AZURE_SUBSCRIPTION_ID: ${AZURE_SUBSCRIPTION_ID}
+      APP_PASSWORD: ${APP_PASSWORD}
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      POSTGRES_PORT: "5432"
+      SPRING_PROFILES_ACTIVE: prod
+    ports:
+      - "8080:8080"
+    networks:
+      - aura-net

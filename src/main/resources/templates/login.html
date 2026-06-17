@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign in — AuraSentry</title>
+    <link rel="stylesheet" th:href="@{/css/azure-portal.css}">
+</head>
+<body class="az-auth-body">
+    <div class="az-auth-wrapper">
+        <div class="az-auth-card">
+            <div class="az-auth-logo">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M5.483 21.3H24L14.025 4.013l-3.3 5.728 5.62 9.774H7.135l-1.652 1.785z" fill="#0078D4"/>
+                    <path d="M13.23 2.7L0 21.3h5.483L14.025 4.013 13.23 2.7z" fill="#5EA0EF"/>
+                </svg>
+                <span>AuraSentry</span>
+            </div>
+            <h2>Sign in</h2>
+
+            <div th:if="${param.error}" class="az-auth-error">
+                Invalid username or password.
+            </div>
+            <div th:if="${param.logout}" class="az-auth-info">
+                You have been signed out.
+            </div>
+            <div th:if="${param.expired}" class="az-auth-info">
+                Your session has expired. Please sign in again.
+            </div>
+            <div th:if="${param.deleted}" class="az-auth-info">
+                Your account has been permanently deleted.
+            </div>
+
+            <form th:action="@{/login}" method="post">
+                <div class="az-form-group">
+                    <label>Username</label>
+                    <input type="text" name="username" class="az-input" placeholder="Enter your username" required autofocus>
+                </div>
+                <div class="az-form-group">
+                    <label>Password</label>
+                    <input type="password" name="password" class="az-input" placeholder="Enter your password" required>
+                </div>
+                <button type="submit" class="az-btn az-btn-primary az-auth-btn">Sign in</button>
+            </form>
+
+            <div class="az-auth-footer">
+                <span>Don't have an account?</span>
+                <a href="/register">Register now</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

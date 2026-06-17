@@ -1,0 +1,48 @@
+---
+# ============================================================
+# AuraSentry – Ansible Group Variables
+# ============================================================
+# This file contains NO real secrets.
+# Actual values are supplied via ansible/group_vars/secrets.yml
+# (encrypted with ansible-vault, not committed to Git)
+# or passed as environment variables.
+#
+# Template setup:
+#   cp ansible/group_vars/all.yml ansible/group_vars/secrets.yml
+#   ansible-vault encrypt ansible/group_vars/secrets.yml
+# ============================================================
+
+# ──────────────────────────────────────────────
+# Azure Service Principal
+# ──────────────────────────────────────────────
+azure_tenant_id: "YOUR_TENANT_ID"
+azure_client_id: "YOUR_CLIENT_ID"
+azure_client_secret: "YOUR_CLIENT_SECRET"
+azure_subscription_id: "YOUR_SUBSCRIPTION_ID"
+
+# ──────────────────────────────────────────────
+# PostgreSQL
+# ──────────────────────────────────────────────
+db_user: "aurasentry"
+db_password: "YOUR_DB_PASSWORD"
+db_name: "aurasentry"
+db_port: 5432
+
+# ──────────────────────────────────────────────
+# AI Advisor (Google Gemini)
+# ──────────────────────────────────────────────
+gemini_api_key: "YOUR_GEMINI_API_KEY"
+
+# ──────────────────────────────────────────────
+# Application
+# ──────────────────────────────────────────────
+app_name: "aura-sentry-core"
+app_port: 8080
+app_version: "0.0.1-SNAPSHOT"
+app_image: "ghcr.io/orez74/aura-sentry-core"
+
+# ──────────────────────────────────────────────
+# Target server (used by deploy-docker.yml)
+# ──────────────────────────────────────────────
+app_dir: "/opt/aurasentry"
+app_user: "aurasentry"

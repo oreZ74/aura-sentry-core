@@ -1,0 +1,136 @@
+[
+  {
+    "id": "/subscriptions/d3b51b90-11a5-408a-8a56-432267599028/resourceGroups/rg-prod/providers/Microsoft.Storage/storageAccounts/stgarchivedata01",
+    "name": "stgarchivedata01",
+    "type": "Microsoft.Storage/storageAccounts",
+    "resourceGroup": "rg-prod",
+    "tags": { "Environment": "production", "CostCenter": "engineering" },
+    "state": "RUNNING",
+    "createdAt": "2023-01-15T10:00:00Z",
+    "sku": "Standard_GRS",
+    "region": "westeurope",
+    "metrics": { "UsedCapacity": 0.0, "Transactions": 0.0 }
+  },
+  {
+    "id": "/subscriptions/d3b51b90-11a5-408a-8a56-432267599028/resourceGroups/rg-dev/providers/Microsoft.Compute/virtualMachines/dev-app-worker-04",
+    "name": "dev-app-worker-04",
+    "type": "Microsoft.Compute/virtualMachines",
+    "resourceGroup": "rg-dev",
+    "tags": { "Environment": "dev", "Owner": "team-alpha", "CostCenter": "platform" },
+    "state": "RUNNING",
+    "createdAt": "2023-06-01T08:00:00Z",
+    "sku": "Standard_D8s_v3",
+    "region": "northeurope"
+  },
+  {
+    "id": "/subscriptions/d3b51b90-11a5-408a-8a56-432267599028/resourceGroups/rg-dev/providers/Microsoft.Network/publicIPAddresses/pip-ingress-frontend",
+    "name": "pip-ingress-frontend",
+    "type": "Microsoft.Network/publicIPAddresses",
+    "resourceGroup": "rg-dev",
+    "tags": {},
+    "state": "RUNNING",
+    "createdAt": "2022-11-20T14:00:00Z",
+    "sku": "Static",
+    "region": "eastus"
+  },
+  {
+    "id": "/subscriptions/d3b51b90-11a5-408a-8a56-432267599028/resourceGroups/rg-prod/providers/Microsoft.Compute/virtualMachines/prod-web-fe-01",
+    "name": "prod-web-fe-01",
+    "type": "Microsoft.Compute/virtualMachines",
+    "resourceGroup": "rg-prod",
+    "tags": { "Environment": "production", "Owner": "ops-team", "CostCenter": "infra" },
+    "state": "RUNNING",
+    "createdAt": "2024-01-10T09:00:00Z",
+    "sku": "Standard_D2s_v3",
+    "region": "westeurope"
+  },
+  {
+    "id": "/subscriptions/d3b51b90-11a5-408a-8a56-432267599028/resourceGroups/rg-prod/providers/Microsoft.DBforPostgreSQL/servers/psql-customer-core",
+    "name": "psql-customer-core",
+    "type": "Microsoft.DBforPostgreSQL/servers",
+    "resourceGroup": "rg-prod",
+    "tags": { "Environment": "production", "Owner": "data-team" },
+    "state": "RUNNING",
+    "createdAt": "2023-08-15T12:00:00Z",
+    "sku": "GP_Gen5_8",
+    "region": "westeurope"
+  },
+  {
+    "id": "/subscriptions/d3b51b90-11a5-408a-8a56-432267599028/resourceGroups/rg-prod/providers/Microsoft.Sql/servers/sql-finance-reporting-server/databases/sqldb-finance-reporting",
+    "name": "sqldb-finance-reporting",
+    "type": "Microsoft.Sql/servers/databases",
+    "resourceGroup": "rg-prod",
+    "tags": { "Environment": "production", "Retention": "long-term" },
+    "state": "RUNNING",
+    "createdAt": "2023-03-12T08:30:00Z",
+    "sku": "Premium_P4",
+    "region": "centralus"
+  },
+  {
+    "id": "/subscriptions/d3b51b90-11a5-408a-8a56-432267599028/resourceGroups/rg-dev/providers/Microsoft.Compute/disks/disk-appdata-prod01",
+    "name": "disk-appdata-prod01",
+    "type": "Microsoft.Compute/disks",
+    "resourceGroup": "rg-dev",
+    "tags": {},
+    "state": "RUNNING",
+    "createdAt": "2022-05-01T10:00:00Z",
+    "sku": "Premium_LRS",
+    "region": "eastus"
+  },
+  {
+    "id": "/subscriptions/d3b51b90-11a5-408a-8a56-432267599028/resourceGroups/rg-prod/providers/Microsoft.Storage/storageAccounts/stgprodbackup01",
+    "name": "stgprodbackup01",
+    "type": "Microsoft.Storage/storageAccounts",
+    "resourceGroup": "rg-prod",
+    "tags": { "Environment": "production", "Compliance": "required" },
+    "state": "RUNNING",
+    "createdAt": "2024-02-20T10:00:00Z",
+    "sku": "Standard_LRS",
+    "region": "westeurope",
+    "metrics": { "UsedCapacity": 1048576.0, "Transactions": 5000.0 }
+  },
+  {
+    "id": "/subscriptions/d3b51b90-11a5-408a-8a56-432267599028/resourceGroups/rg-staging/providers/Microsoft.Compute/virtualMachines/staging-qa-runner-01",
+    "name": "staging-qa-runner-01",
+    "type": "Microsoft.Compute/virtualMachines",
+    "resourceGroup": "rg-staging",
+    "tags": { "Environment": "staging", "AutoShutdown": "enabled" },
+    "state": "STOPPED",
+    "createdAt": "2023-12-01T14:00:00Z",
+    "sku": "Standard_E4s_v3",
+    "region": "westeurope"
+  },
+  {
+    "id": "/subscriptions/d3b51b90-11a5-408a-8a56-432267599028/resourceGroups/rg-dev/providers/Microsoft.Network/loadBalancers/lb-int-dev-01",
+    "name": "lb-int-dev-01",
+    "type": "Microsoft.Network/loadBalancers",
+    "resourceGroup": "rg-dev",
+    "tags": { "Environment": "dev" },
+    "state": "RUNNING",
+    "createdAt": "2023-07-01T09:00:00Z",
+    "sku": "Standard",
+    "region": "eastus"
+  },
+  {
+    "id": "/subscriptions/d3b51b90-11a5-408a-8a56-432267599028/resourceGroups/rg-prod/providers/Microsoft.Network/networkInterfaces/nic-prod-fe-01",
+    "name": "nic-prod-fe-01",
+    "type": "Microsoft.Network/networkInterfaces",
+    "resourceGroup": "rg-prod",
+    "tags": { "Environment": "production" },
+    "state": "RUNNING",
+    "createdAt": "2024-01-10T09:01:00Z",
+    "sku": "N/A",
+    "region": "westeurope"
+  },
+  {
+    "id": "/subscriptions/d3b51b90-11a5-408a-8a56-432267599028/resourceGroups/rg-prod/providers/Microsoft.Compute/virtualMachines/prod-oracle-erp-db",
+    "name": "prod-oracle-erp-db",
+    "type": "Microsoft.Compute/virtualMachines",
+    "resourceGroup": "rg-prod",
+    "tags": { "Environment": "production", "Owner": "oracle-team", "CostCenter": "erp" },
+    "state": "RUNNING",
+    "createdAt": "2023-10-05T07:00:00Z",
+    "sku": "Standard_E8s_v3",
+    "region": "japaneast"
+  }
+]

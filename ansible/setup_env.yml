@@ -1,0 +1,49 @@
+---
+# ============================================================
+# AuraSentry – Playbook: Generate Local .env File
+# ============================================================
+# This playbook renders the Jinja2 template templates/env.j2
+# using variables from group_vars/ and writes a .env file
+# to the project directory.
+#
+# Run:
+#   ansible-playbook ansible/setup_env.yml
+#
+# With encrypted vault:
+#   ansible-playbook ansible/setup_env.yml --ask-vault-pass
+# ============================================================
+
+- name: Setup Local Development Environment
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars_files:
+    - group_vars/all.yml
+    # Uncomment to use ansible-vault:
+    # - group_vars/secrets.yml
+
+  tasks:
+    - name: Ensure target directory exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/.."
+        state: directory
+        mode: "0755"
+
+    - name: Generate .env file from Jinja2 template
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/env.j2"
+        dest: "{{ playbook_dir }}/../.env"
+        mode: "0600"
+      notify: .env created successfully
+
+    - name: Verify .env is listed in .gitignore
+      ansible.builtin.lineinfile:
+        path: "{{ playbook_dir }}/../.gitignore"
+        line: ".env"
+        state: present
+
+  handlers:
+    - name: .env created successfully
+      ansible.builtin.debug:
+        msg: ".env was generated successfully. Start the application with: docker compose up -d"

@@ -1,0 +1,56 @@
+name: Build and Deploy to Prod
+
+on:
+  push:
+    branches: [ "main" ] # Triggert nur bei einem Push auf den main-Branch
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # Erlaubt GitHub, das Docker-Image hochzuladen
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository }}:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Execute deployment via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            # Gehe in den Ordner, wo deine docker-compose.prod.yml und .env liegen
+            cd /opt/aurasentry # <-- Pfad anpassen!
+
+            # Logge dich auf dem Server in die GitHub Registry ein (um das Image zu laden)
+            echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            # Ziehe das neueste Image
+            docker pull ghcr.io/${{ github.repository }}:latest
+
+            # Starte den Container neu (Postgres läuft ungestört weiter)
+            docker compose -f docker-compose.prod.yml up -d app
+
+            # Räume alte, ungenutzte Images auf
+            docker image prune -f

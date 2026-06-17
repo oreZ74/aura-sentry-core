@@ -1,0 +1,193 @@
+{
+  "reports": [
+    {
+      "resourceType": "Microsoft.Storage/storageAccounts",
+      "matchSku": "Standard_GRS",
+      "report": {
+        "summary": "This storage account uses Geo-Redundant Storage (GRS) but has no replication requirement tags. Downgrading to LRS saves 33% while maintaining adequate durability for most workloads.",
+        "issueDetected": true,
+        "issueType": "COST_OPTIMIZATION",
+        "savingsPotentialUsd": 12.50,
+        "severity": "MEDIUM",
+        "remediationScripts": {
+          "description": "Change storage replication from GRS to locally-redundant LRS",
+          "azureCli": "az storage account update --name stgarchivedata01 --resource-group rg-prod --sku Standard_LRS",
+          "terraform": "resource \"azurerm_storage_account\" \"optimized\" {\n  name                     = \"stgarchivedata01\"\n  resource_group_name      = \"rg-prod\"\n  location                 = \"westeurope\"\n  account_tier             = \"Standard\"\n  account_replication_type = \"LRS\"\n\n  tags = {\n    Environment = \"production\"\n    CostCenter  = \"engineering\"\n    OptimizedBy = \"AuraSentry\"\n  }\n}",
+          "azurePowerShell": "Set-AzStorageAccount -ResourceGroupName rg-prod -Name stgarchivedata01 -SkuName Standard_LRS",
+          "bicep": "resource sa 'Microsoft.Storage/storageAccounts@2023-04-01' = {\n  name: 'stgarchivedata01'\n  location: 'westeurope'\n  sku: {\n    name: 'Standard_LRS'\n  }\n  kind: 'StorageV2'\n}",
+          "requiredRbacRoles": ["Storage Account Contributor"]
+        },
+        "recommendations": [
+          "Verify if GRS replication is required by your compliance policy",
+          "Enable Azure Storage lifecycle management to auto-tier blobs",
+          "Consider archive tier for cold data older than 180 days"
+        ]
+      }
+    },
+    {
+      "resourceType": "Microsoft.Compute/virtualMachines",
+      "matchSku": "Standard_D8s_v3",
+      "report": {
+        "summary": "This development VM (Standard_D8s_v3) is significantly oversized for typical dev workloads. A Standard_D2s_v3 would provide adequate performance at 50% lower cost.",
+        "issueDetected": true,
+        "issueType": "OVERPROVISIONED",
+        "savingsPotentialUsd": 95.00,
+        "severity": "HIGH",
+        "remediationScripts": {
+          "description": "Resize development VM from D8s_v3 to D2s_v3",
+          "azureCli": "az vm resize --resource-group rg-dev --name dev-app-worker-04 --size Standard_D2s_v3",
+          "terraform": "resource \"azurerm_linux_virtual_machine\" \"dev_vm\" {\n  name                = \"dev-app-worker-04\"\n  resource_group_name = \"rg-dev\"\n  location            = \"northeurope\"\n  size                = \"Standard_D2s_v3\"\n\n  admin_username = \"azureuser\"\n  network_interface_ids = [azurerm_network_interface.dev_nic.id]\n\n  os_disk {\n    caching              = \"ReadWrite\"\n    storage_account_type = \"Standard_LRS\"\n  }\n\n  tags = {\n    Environment = \"dev\"\n    OptimizedBy = \"AuraSentry\"\n  }\n}",
+          "azurePowerShell": "Stop-AzVM -ResourceGroupName rg-dev -Name dev-app-worker-04 -Force\n$vm = Get-AzVM -ResourceGroupName rg-dev -Name dev-app-worker-04\n$vm.HardwareProfile.VmSize = 'Standard_D2s_v3'\nUpdate-AzVM -ResourceGroupName rg-dev -VM $vm\nStart-AzVM -ResourceGroupName rg-dev -Name dev-app-worker-04",
+          "bicep": "resource vm 'Microsoft.Compute/virtualMachines@2023-09-01' = {\n  name: 'dev-app-worker-04'\n  location: 'northeurope'\n  properties: {\n    hardwareProfile: {\n      vmSize: 'Standard_D2s_v3'\n    }\n    storageProfile: {\n      osDisk: {\n        createOption: 'FromImage'\n        managedDisk: {\n          storageAccountType: 'Standard_LRS'\n        }\n      }\n    }\n  }\n}",
+          "requiredRbacRoles": ["Virtual Machine Contributor"]
+        },
+        "recommendations": [
+          "Schedule auto-shutdown for nights and weekends (10 PM to 6 AM)",
+          "Consider Azure DevTest Labs for non-production VMs",
+          "Enable Azure Advisor right-sizing alerts for ongoing monitoring"
+        ]
+      }
+    },
+    {
+      "resourceType": "Microsoft.Network/publicIPAddresses",
+      "matchSku": "Static",
+      "report": {
+        "summary": "This static public IP is unattached and incurring unnecessary costs. Delete or attach to a resource immediately.",
+        "issueDetected": true,
+        "issueType": "ORPHANED",
+        "savingsPotentialUsd": 3.00,
+        "severity": "LOW",
+        "remediationScripts": {
+          "description": "Delete orphaned public IP address",
+          "azureCli": "az network public-ip delete --resource-group rg-dev --name pip-ingress-frontend",
+          "terraform": null,
+          "azurePowerShell": "Remove-AzPublicIpAddress -Name pip-ingress-frontend -ResourceGroupName rg-dev -Force",
+          "bicep": null,
+          "requiredRbacRoles": ["Network Contributor"]
+        },
+        "recommendations": [
+          "Run regular resource cleanup audits",
+          "Enable tagging policy to track resource ownership"
+        ]
+      }
+    },
+    {
+      "resourceType": "Microsoft.DBforPostgreSQL/servers",
+      "matchSku": "GP_Gen5_8",
+      "report": {
+        "summary": "This PostgreSQL server uses General Purpose tier with 8 vCores – likely overkill for the observed workload. Consider downgrading to GP_Gen5_4 or switching to Burstable tier.",
+        "issueDetected": true,
+        "issueType": "OVERPROVISIONED",
+        "savingsPotentialUsd": 100.00,
+        "severity": "HIGH",
+        "remediationScripts": {
+          "description": "Scale down PostgreSQL server from 8 vCores to 4 vCores",
+          "azureCli": "az postgres server update --resource-group rg-prod --name psql-customer-core --vcore 4 --sku-name GP_Gen5_4",
+          "terraform": null,
+          "azurePowerShell": null,
+          "bicep": null,
+          "requiredRbacRoles": ["PostgreSQL Contributor"]
+        },
+        "recommendations": [
+          "Review query performance metrics before downsizing",
+          "Enable auto-pause for Development/QA PostgreSQL Flexible Servers",
+          "Consider connection pooling to reduce vCore requirements"
+        ]
+      }
+    },
+    {
+      "resourceType": "Microsoft.Sql/servers/databases",
+      "matchSku": "Premium_P4",
+      "report": {
+        "summary": "This SQL database runs on expensive Premium P4 tier. Based on typical patterns, Standard S3 would suffice, saving approximately 70%.",
+        "issueDetected": true,
+        "issueType": "COST_OPTIMIZATION",
+        "savingsPotentialUsd": 280.00,
+        "severity": "HIGH",
+        "remediationScripts": {
+          "description": "Downgrade SQL Database from Premium P4 to Standard S3",
+          "azureCli": "az sql db update --resource-group rg-prod --server sqldb-finance-reporting-server --name sqldb-finance-reporting --edition Standard --service-objective S3",
+          "terraform": "resource \"azurerm_mssql_database\" \"db\" {\n  name      = \"sqldb-finance-reporting\"\n  server_id = azurerm_mssql_server.server.id\n  sku_name  = \"S3\"\n\n  tags = {\n    OptimizedBy = \"AuraSentry\"\n  }\n}",
+          "azurePowerShell": "Set-AzSqlDatabase -DatabaseName sqldb-finance-reporting -ServerName sqldb-finance-reporting-server -ResourceGroupName rg-prod -Edition Standard -RequestedServiceObjectiveName S3",
+          "bicep": null,
+          "requiredRbacRoles": ["SQL DB Contributor"]
+        },
+        "recommendations": [
+          "Evaluate DTU usage over the last 30 days via Azure Metrics",
+          "Consider serverless tier for sporadically accessed databases",
+          "Enable automatic tuning recommendations"
+        ]
+      }
+    },
+    {
+      "resourceType": "Microsoft.Compute/disks",
+      "matchSku": "Premium_LRS",
+      "report": {
+        "summary": "This managed disk is orphaned – not attached to any VM. Delete immediately to stop incurring premium storage charges.",
+        "issueDetected": true,
+        "issueType": "ORPHANED",
+        "savingsPotentialUsd": 35.00,
+        "severity": "MEDIUM",
+        "remediationScripts": {
+          "description": "Delete orphaned premium managed disk",
+          "azureCli": "az disk delete --resource-group rg-dev --name disk-appdata-prod01 --yes",
+          "terraform": null,
+          "azurePowerShell": "Remove-AzDisk -DiskName disk-appdata-prod01 -ResourceGroupName rg-dev -Force",
+          "bicep": null,
+          "requiredRbacRoles": ["Disk Operator"]
+        },
+        "recommendations": [
+          "Enable Azure Policy to block unattached premium disks",
+          "Implement regular disk cleanup runbooks"
+        ]
+      }
+    },
+    {
+      "resourceType": "Microsoft.Compute/virtualMachines",
+      "matchSku": "Standard_E8s_v3",
+      "report": {
+        "summary": "This memory-optimized VM (E8s_v3) is deployed in Japan East – one of the most expensive Azure regions. Consider relocating to Southeast Asia or downgrading to E4s_v3 if 128 GB RAM is not required.",
+        "issueDetected": true,
+        "issueType": "COST_OPTIMIZATION",
+        "savingsPotentialUsd": 290.00,
+        "severity": "HIGH",
+        "remediationScripts": {
+          "description": "Resize memory-optimized VM from E8s_v3 to E4s_v3",
+          "azureCli": "az vm resize --resource-group rg-prod --name prod-oracle-erp-db --size Standard_E4s_v3",
+          "terraform": "resource \"azurerm_linux_virtual_machine\" \"oracle_vm\" {\n  name                = \"prod-oracle-erp-db\"\n  resource_group_name = \"rg-prod\"\n  location            = \"japaneast\"\n  size                = \"Standard_E4s_v3\"\n\n  tags = {\n    Environment = \"production\"\n    OptimizedBy = \"AuraSentry\"\n  }\n}",
+          "azurePowerShell": "Stop-AzVM -ResourceGroupName rg-prod -Name prod-oracle-erp-db -Force\n$vm = Get-AzVM -ResourceGroupName rg-prod -Name prod-oracle-erp-db\n$vm.HardwareProfile.VmSize = 'Standard_E4s_v3'\nUpdate-AzVM -ResourceGroupName rg-prod -VM $vm\nStart-AzVM -ResourceGroupName rg-prod -Name prod-oracle-erp-db",
+          "bicep": null,
+          "requiredRbacRoles": ["Virtual Machine Contributor"]
+        },
+        "recommendations": [
+          "Evaluate if Oracle workloads can run in Southeast Asia region (20% cheaper)",
+          "Consider Oracle Cloud Infrastructure (OCI) for Oracle-specific workloads",
+          "Review RAM utilization metrics before downsizing memory-optimized SKUs"
+        ]
+      }
+    },
+    {
+      "resourceType": "Microsoft.Network/loadBalancers",
+      "matchSku": "Standard",
+      "report": {
+        "summary": "This Standard load balancer has no backend pool members and no health probes configured. It appears idle and is costing ~$16/month.",
+        "issueDetected": true,
+        "issueType": "ORPHANED",
+        "savingsPotentialUsd": 16.00,
+        "severity": "MEDIUM",
+        "remediationScripts": {
+          "description": "Delete idle load balancer with empty backend pool",
+          "azureCli": "az network lb delete --resource-group rg-dev --name lb-int-dev-01",
+          "terraform": null,
+          "azurePowerShell": "Remove-AzLoadBalancer -Name lb-int-dev-01 -ResourceGroupName rg-dev -Force",
+          "bicep": null,
+          "requiredRbacRoles": ["Network Contributor"]
+        },
+        "recommendations": [
+          "Implement regular network resource audits",
+          "Set up alerts for load balancers with zero backend pool members"
+        ]
+      }
+    }
+  ]
+}

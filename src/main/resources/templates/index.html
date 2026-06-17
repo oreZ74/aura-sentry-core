@@ -1,0 +1,1429 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AuraSentry — Azure Portal Native Integration</title>
+    <link rel="stylesheet" th:href="@{/css/azure-portal.css}" />
+    <style>
+      .az-data-grid th {
+        position: relative;
+      }
+      th.id-col {
+        width: 150px;
+        min-width: 150px;
+        max-width: 150px;
+      }
+      td.id-cell {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 150px;
+        min-width: 150px;
+      }
+      .resizer {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 5px;
+        cursor: col-resize;
+        user-select: none;
+        height: 100%;
+        z-index: 1;
+        border-right: 1px solid var(--az-border-subtle, #e2e8f0);
+      }
+      .resizer:hover,
+      .resizer.resizing {
+        border-right: 2px solid var(--az-accent-blue, #0078d4);
+        background-color: transparent;
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body th:attr="data-demo-mode=${demoMode}">
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <main class="az-blade-container">
+      <section class="az-blade-header">
+        <div class="az-title-area">
+          <h1>Resource Overview</h1>
+          <p>
+            <span
+              >Azure infrastructure analysed by GuardianEngine &amp; AI
+              Advisor</span
+            >
+            <span id="demo-badge" class="az-demo-badge" th:if="${demoMode}"
+              >● DEMO MODE</span
+            >
+          </p>
+        </div>
+        <div class="az-command-bar">
+          <button id="rescan-btn" class="az-btn az-btn-primary" onclick="triggerSync()">
+            <svg id="rescan-icon" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+              <path
+                d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"
+              />
+              <path
+                d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192z"
+              />
+            </svg>
+            <span id="rescan-spinner" style="display:none; margin-right:6px;">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" class="az-spinner">
+                <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="20 10" opacity="0.8">
+                  <animateTransform attributeName="transform" type="rotate" from="0 8 8" to="360 8 8" dur="1s" repeatCount="indefinite"/>
+                </circle>
+              </svg>
+            </span>
+            <span id="rescan-label">Re-Scan</span>
+          </button>
+          <span id="last-sync-text" style="font-size:12px; color:var(--az-text-secondary); margin-left:8px; display:none;">
+            Zuletzt synchronisiert: <span id="last-sync-time">–</span>
+          </span>
+          <button class="az-btn az-btn-secondary" onclick="openSetupModal()">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+              <path
+                d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.86z"
+              />
+            </svg>
+            Cloud &amp; AI Config
+          </button>
+        </div>
+      </section>
+
+      <div
+        th:if="${credentialsMissing}"
+        style="
+          background-color: #fff4ce;
+          color: #333;
+          padding: 12px 16px;
+          border-left: 4px solid #f2c811;
+          margin-bottom: 20px;
+        "
+      >
+        <strong>&#9888; Azure Credentials Required</strong>
+        <p
+          style="
+            margin-top: 4px;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #555;
+          "
+        >
+          No cloud credentials are configured. Please add your Azure Tenant,
+          Client, Subscription IDs and API keys in
+          <a
+            href="/settings"
+            style="color: var(--az-text-link); font-weight: 600"
+            >Settings &rarr; Advanced</a
+          >
+          to enable resource scanning, or activate
+          <a
+            href="#"
+            onclick="
+              document.getElementById('setup-modal').classList.add('active');
+              return false;
+            "
+            style="color: var(--az-text-link); font-weight: 600"
+            >Demo Mode</a
+          >
+          for a preview.
+        </p>
+      </div>
+
+      <section class="az-tile-grid-3">
+        <div class="az-tile">
+          <div
+            style="
+              color: var(--az-accent-blue);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            "
+          >
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M5.483 21.3H24L14.025 4.013l-3.3 5.728 5.62 9.774H7.135l-1.652 1.785z"
+                fill="#0078D4"
+              />
+              <path
+                d="M13.23 2.7L0 21.3h5.483L14.025 4.013 13.23 2.7z"
+                fill="#5EA0EF"
+              />
+            </svg>
+          </div>
+          <div>
+            <div class="az-metric" th:text="${totalResources}">0</div>
+            <div class="az-tile-label">Total Resources</div>
+          </div>
+        </div>
+
+        <div class="az-tile">
+          <div
+            style="
+              color: var(--az-accent-orange);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            "
+          >
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--az-accent-orange)"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+              ></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+          </div>
+          <div>
+            <div
+              class="az-metric"
+              th:classappend="${warningCount > 0} ? 'warning' : ''"
+              th:text="${warningCount}"
+            >
+              0
+            </div>
+            <div class="az-tile-label">Active Warnings</div>
+          </div>
+        </div>
+
+        <div class="az-tile">
+          <div
+            style="
+              color: var(--az-accent-green);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            "
+          >
+            <!-- Currency-neutral trend-down arrow (Heroicon: arrow-trending-down) -->
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M3 7l6 6 6-4 6 8" />
+            </svg>
+          </div>
+          <div>
+            <div class="az-metric success" th:text="${totalMonthlySavings}">
+              $0.00
+            </div>
+            <div class="az-tile-label">
+              Monthly Savings
+              <span
+                th:text="${totalAnnualSavings}"
+                class="az-tile-subtext"
+                style="display: inline; block-size: auto; opacity: 0.7"
+                >(per year)</span
+              >
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="az-tile-grid-2" style="grid-template-columns: 1fr">
+        <div class="az-tile-wide">
+          <h3>Infrastructure Cost</h3>
+          <div class="az-metric" th:text="${totalMonthlyCost}">$0.00</div>
+          <div class="az-tile-label">
+            Month-to-date billing from Azure Cost Management
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div
+          class="az-section-title-container"
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+          "
+        >
+          <h2 class="az-section-title" style="margin-bottom: 0">
+            Resource Scan Results
+          </h2>
+          <span
+            class="az-mono"
+            style="font-size: 11px; color: var(--az-text-secondary)"
+            th:text="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd HH:mm')} + ' UTC'"
+            >–</span
+          >
+        </div>
+        <div class="az-data-grid-container">
+          <table class="az-data-grid">
+            <thead>
+              <tr>
+                <th class="id-col">
+                  ID
+                  <div class="resizer"></div>
+                </th>
+                <th>
+                  NAME
+                  <div class="resizer"></div>
+                </th>
+                <th>
+                  TYPE
+                  <div class="resizer"></div>
+                </th>
+                <th>
+                  SKU / TIER
+                  <div class="resizer"></div>
+                </th>
+                <th>
+                  REGION
+                  <div class="resizer"></div>
+                </th>
+                <th>
+                  STATUS
+                  <div class="resizer"></div>
+                </th>
+                <th>
+                  COST (MTD)
+                  <div class="resizer"></div>
+                </th>
+                <th>
+                  FLAG
+                  <div class="resizer"></div>
+                </th>
+                <th>
+                  AI ADVISOR
+                  <div class="resizer"></div>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="resourceTableBody">
+              <!-- Loading placeholder row (replaced by JS after fetch) -->
+              <tr id="loadingRow">
+                <td colspan="9" style="text-align: center; padding: 32px 16px; color: var(--az-text-secondary);">
+                  <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="az-spinner">
+                      <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="20 10" opacity="0.8">
+                        <animateTransform attributeName="transform" type="rotate" from="0 8 8" to="360 8 8" dur="1s" repeatCount="indefinite"/>
+                      </circle>
+                    </svg>
+                    <span>Lade Ressourcen aus dem Cache …</span>
+                  </div>
+                </td>
+              </tr>
+              <tr id="noResultsRow" style="display: none">
+                <td
+                  colspan="9"
+                  style="
+                    text-align: center;
+                    padding: 32px 16px;
+                    color: var(--az-text-secondary);
+                    font-style: italic;
+                  "
+                >
+                  <span id="noResultsText"></span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <div
+      id="setup-modal"
+      class="az-overlay-right"
+      onclick="if (event.target === this) closeSetupModal();"
+    >
+      <form id="credentials-form" class="az-blade">
+        <div class="az-panel-header">
+          <h2>AI Advisor Configuration</h2>
+          <button
+            type="button"
+            class="az-modal-close"
+            onclick="closeSetupModal()"
+          >
+            ✕
+          </button>
+        </div>
+        <div class="az-panel-body">
+          <p
+            style="
+              font-size: 12px;
+              color: var(--az-text-secondary);
+              margin-bottom: 20px;
+              line-height: 1.5;
+            "
+          >
+            Cloud credentials are now managed in
+            <a href="/settings" style="color: var(--az-text-link)"
+              >Settings → Advanced</a
+            >.
+          </p>
+
+          <div class="az-form-group">
+            <label
+              >System Template
+              <span style="color: var(--az-text-disabled)"
+                >({{resourceName}}, {{resourceType}}, {{flag}} supported)</span
+              ></label
+            >
+            <textarea
+              id="ai-template"
+              class="az-input"
+              style="
+                min-height: 280px;
+                overflow-y: hidden;
+                font-family: monospace;
+                padding: 6px 12px;
+              "
+              placeholder="Loading system prompt template..."
+              oninput="autoResize(this)"
+            ></textarea>
+          </div>
+          <div class="az-form-group">
+            <label>Specific Instructions</label>
+            <textarea
+              id="ai-instructions"
+              class="az-input"
+              style="min-height: 120px; overflow-y: hidden; padding: 6px 12px"
+              placeholder="Loading example instructions..."
+              oninput="autoResize(this)"
+            ></textarea>
+          </div>
+        </div>
+        <div class="az-panel-footer">
+          <button
+            type="button"
+            id="demo-btn"
+            onclick="toggleDemoMode()"
+            class="az-btn az-btn-secondary"
+            style="
+              border-color: var(--az-accent-green);
+              color: var(--az-accent-green);
+              margin-right: auto;
+            "
+          >
+            Try Demo Mode (Offline)
+          </button>
+          <button
+            type="button"
+            onclick="closeSetupModal()"
+            class="az-btn az-btn-secondary"
+          >
+            Cancel
+          </button>
+          <button type="submit" id="save-btn" class="az-btn az-btn-primary">
+            Save AI Config
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div
+      id="ai-modal"
+      class="az-overlay-center"
+      onclick="if (event.target === this) closeModal();"
+    >
+      <div class="az-dialog">
+        <div class="az-panel-header">
+          <div style="display: flex; flex-direction: column">
+            <span style="font-size: 11px; color: var(--az-text-secondary)"
+              >AI FinOps Analysis Report</span
+            >
+            <h2 id="modal-resource-name" style="color: var(--az-text-link)">
+              -
+            </h2>
+          </div>
+          <button class="az-modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="az-panel-body">
+          <div id="modal-loading" style="text-align: center; padding: 30px 0">
+            <div
+              style="
+                color: var(--az-accent-purple);
+                font-weight: 600;
+                margin-bottom: 4px;
+              "
+            >
+              AI is analysing the resource …
+            </div>
+          </div>
+
+          <div
+            id="modal-error"
+            class="az-flag-tag waste"
+            style="display: none; padding: 12px; margin-bottom: 12px"
+          >
+            <strong>Failed to fetch the AI report:</strong>
+            <span id="modal-error-msg">-</span>
+          </div>
+
+          <div
+            id="modal-content"
+            style="display: none; flex-direction: column; gap: 16px"
+          >
+            <div class="az-modal-info-grid">
+              <div>
+                <span style="color: var(--az-text-secondary)"
+                  >Severity Index:</span
+                >
+                <span
+                  id="modal-severity-badge"
+                  class="badge-none"
+                  style="padding: 2px 6px; border-radius: 2px; font-weight: 600"
+                  >–</span
+                >
+              </div>
+              <div>
+                <span style="color: var(--az-text-secondary)">Issue Type:</span>
+                <span id="modal-issue-type" style="font-weight: 600">–</span>
+              </div>
+              <div>
+                <span style="color: var(--az-text-secondary)">Savings:</span>
+                <span id="modal-savings" style="font-weight: 600">$0.00</span>
+              </div>
+              <div>
+                <span
+                  id="modal-issue-detected"
+                  class="az-flag-tag waste"
+                  style="display: none"
+                  >ISSUE DETECTED</span
+                >
+              </div>
+            </div>
+
+            <div class="az-form-group">
+              <label style="color: var(--az-text-link); font-size: 13px"
+                >Root Cause Analysis</label
+              >
+              <p
+                id="modal-summary-text"
+                style="
+                  line-height: 1.5;
+                  color: var(--az-text-primary);
+                  background: var(--az-bg-primary);
+                  padding: 10px;
+                  border-radius: 4px;
+                  border: 1px solid var(--az-border-subtle);
+                "
+              ></p>
+            </div>
+
+            <div class="az-form-group">
+              <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                <label>Infrastructure-as-Code Reference</label>
+                <div class="az-roles-badge" id="roles-badge" style="display:none;">
+                  <span class="az-roles-icon">&#x1F6E1;</span>
+                  <span id="roles-text"></span>
+                </div>
+              </div>
+              <div class="az-script-tabs" id="script-tabs"></div>
+              <div class="az-script-panes" id="script-panes"></div>
+            </div>
+
+            <div class="az-form-group">
+              <label>Actionable Architecture Recommendations</label>
+              <ul
+                id="modal-recommendations"
+                style="
+                  padding-left: 16px;
+                  line-height: 1.6;
+                  color: var(--az-text-secondary);
+                "
+              ></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      /* ── Dynamic currency symbol injected from server ── */
+      window.__currencySymbol = /*[[${currencySymbol}]]*/ "$";
+
+      /* ── Re-Scan Sync Button with 5-Minute Cooldown ──────────────────────── */
+      const SYNC_COOLDOWN_MS = 30 * 1000;     // 30 Sekunden
+      const LS_KEY_LAST_SYNC = "auraSentry_lastSyncTime";
+
+      function initSyncButton() {
+        var btn = document.getElementById("rescan-btn");
+        var label = document.getElementById("rescan-label");
+        var spinner = document.getElementById("rescan-spinner");
+        var icon = document.getElementById("rescan-icon");
+        var lastSyncText = document.getElementById("last-sync-text");
+        var lastSyncTime = document.getElementById("last-sync-time");
+
+        // Restore last synced timestamp from localStorage
+        var stored = localStorage.getItem(LS_KEY_LAST_SYNC);
+        if (stored) {
+          var last = new Date(stored);
+          lastSyncTime.textContent = last.toLocaleString("de-DE", {
+            year: "numeric", month: "2-digit", day: "2-digit",
+            hour: "2-digit", minute: "2-digit", second: "2-digit"
+          });
+          lastSyncText.style.display = "inline";
+
+          // Check if still in cooldown
+          var elapsed = Date.now() - last.getTime();
+          if (elapsed < SYNC_COOLDOWN_MS) {
+            startCooldown(SYNC_COOLDOWN_MS - elapsed);
+          }
+        }
+      }
+
+      function triggerSync() {
+        var btn = document.getElementById("rescan-btn");
+        var label = document.getElementById("rescan-label");
+        var spinner = document.getElementById("rescan-spinner");
+        var icon = document.getElementById("rescan-icon");
+        var lastSyncText = document.getElementById("last-sync-text");
+        var lastSyncTime = document.getElementById("last-sync-time");
+
+        if (btn.disabled) return;
+
+        // ── Loading state ──
+        btn.disabled = true;
+        icon.style.display = "none";
+        spinner.style.display = "inline";
+        label.textContent = "Synchronisiere…";
+
+        fetch("/api/v1/optimization/sync")
+          .then(function (res) {
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            return res.json();
+          })
+          .then(function (data) {
+            // Success: store timestamp, update UI, start cooldown
+            var now = new Date();
+            localStorage.setItem(LS_KEY_LAST_SYNC, now.toISOString());
+
+            lastSyncTime.textContent = now.toLocaleString("de-DE", {
+              year: "numeric", month: "2-digit", day: "2-digit",
+              hour: "2-digit", minute: "2-digit", second: "2-digit"
+            });
+            lastSyncText.style.display = "inline";
+
+            label.textContent = data.upsertedCount + " Ressourcen aktualisiert";
+            spinner.style.display = "none";
+            icon.style.display = "";
+
+            startCooldown(SYNC_COOLDOWN_MS);
+
+            // Optional: reload page after short delay to show fresh data
+            setTimeout(function () {
+              window.location.reload();
+            }, 1200);
+          })
+          .catch(function (err) {
+            console.error("[Sync] Failed:", err);
+            label.textContent = "Fehler – bitte erneut versuchen";
+            spinner.style.display = "none";
+            icon.style.display = "";
+            btn.disabled = false;
+          });
+      }
+
+      var cooldownTimer = null;
+      function startCooldown(remainingMs) {
+        var btn = document.getElementById("rescan-btn");
+        var label = document.getElementById("rescan-label");
+        btn.disabled = true;
+
+        var end = Date.now() + remainingMs;
+
+        function tick() {
+          var left = end - Date.now();
+          if (left <= 0) {
+            btn.disabled = false;
+            label.textContent = "Re-Scan";
+            if (cooldownTimer) clearInterval(cooldownTimer);
+            return;
+          }
+          var mins = Math.floor(left / 60000);
+          var secs = Math.floor((left % 60000) / 1000);
+          label.textContent = "Cooldown " + mins + ":" + (secs < 10 ? "0" : "") + secs;
+        }
+
+        tick();
+        cooldownTimer = setInterval(tick, 1000);
+      }
+
+      // Initialise on page load
+      initSyncButton();
+
+      /* ── Load cached resources into table on initial page load ───────────── */
+      (function loadCachedResources() {
+        var tbody = document.getElementById("resourceTableBody");
+        var loadingRow = document.getElementById("loadingRow");
+        var noResultsRow = document.getElementById("noResultsRow");
+        var noResultsText = document.getElementById("noResultsText");
+
+        fetch("/api/v1/optimization/cached-resources")
+          .then(function (res) {
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            return res.json();
+          })
+          .then(function (data) {
+            if (!data || data.length === 0) {
+              if (loadingRow) loadingRow.style.display = "none";
+              if (noResultsRow) {
+                noResultsRow.style.display = "";
+                noResultsText.textContent = "Keine Ressourcen im Cache. Führe einen Re-Scan durch.";
+              }
+              return;
+            }
+
+            // Remove loading row
+            if (loadingRow) loadingRow.remove();
+
+            data.forEach(function (dto) {
+              var tr = document.createElement("tr");
+              tr.className = "az-table-row";
+              tr.setAttribute("data-resource-id", dto.azureId);
+
+              // ── 1. ID ──
+              var tdId = document.createElement("td");
+              tdId.className = "az-mono id-cell";
+              tdId.textContent = dto.azureId;
+              tdId.title = dto.azureId;
+              tr.appendChild(tdId);
+
+              // ── 2. NAME ──
+              var tdName = document.createElement("td");
+              tdName.style.fontWeight = "500";
+              tdName.textContent = dto.name || "–";
+              tr.appendChild(tdName);
+
+              // ── 3. TYPE ──
+              var tdType = document.createElement("td");
+              tdType.style.color = "var(--az-text-secondary)";
+              tdType.innerHTML = '<div style="display:flex;align-items:center;gap:8px">' +
+                '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+                '<rect x="2" y="2" width="20" height="20" rx="2" ry="2"></rect>' +
+                '<path d="M2 10h20M2 14h20M10 2v20"></path></svg>' +
+                '<span>' + escapeHtml(dto.type || "–") + '</span></div>';
+              tr.appendChild(tdType);
+
+              // ── 4. SKU / TIER ──
+              var tdSku = document.createElement("td");
+              tdSku.className = "az-mono";
+              tdSku.textContent = dto.sku || "N/A";
+              tr.appendChild(tdSku);
+
+              // ── 5. REGION ──
+              var tdRegion = document.createElement("td");
+              tdRegion.textContent = dto.region || "Unknown";
+              tr.appendChild(tdRegion);
+
+              // ── 6. STATUS ──
+              var tdState = document.createElement("td");
+              var stateClass = "unknown";
+              var stateLabel = "UNKNOWN";
+              if (dto.state === "RUNNING") { stateClass = "running"; stateLabel = "RUNNING"; }
+              else if (dto.state === "STOPPED") { stateClass = "stopped"; stateLabel = "STOPPED"; }
+              else if (dto.state === "DEALLOCATED") { stateClass = "deallocated"; stateLabel = "DEALLOCATED"; }
+              tdState.innerHTML = '<span class="az-status ' + stateClass + '">' +
+                '<span class="az-status-dot"></span>' + stateLabel + '</span>';
+              tr.appendChild(tdState);
+
+              // ── 7. COST (MTD) ──
+              var tdCost = document.createElement("td");
+              tdCost.className = "az-mono";
+              tdCost.style.color = "var(--az-text-primary)";
+              var costVal = typeof dto.cost === "number" ? dto.cost.toFixed(2) : "0.00";
+              tdCost.textContent = (dto.currency || "$") + costVal;
+              tr.appendChild(tdCost);
+
+              // ── 8. FLAG ──
+              var tdFlag = document.createElement("td");
+              tdFlag.className = "flag-cell";
+              tdFlag.setAttribute("data-resource-id", dto.azureId);
+              var flagLabel = dto.flag || "HEALTHY";
+              var flagCss = "unknown";
+              if (flagLabel === "HEALTHY") flagCss = "healthy";
+              else if (flagLabel === "ORPHANED") flagCss = "orphaned";
+              else if (flagLabel === "NEW_RESOURCE") flagCss = "healthy"; // blue-ish, informational
+              else if (flagLabel === "COST_OPTIMIZATION" || flagLabel === "OVERPROVISIONED" || flagLabel === "UNDERUTILIZED") flagCss = "waste";
+              else if (flagLabel === "GOVERNANCE_MISSING") flagCss = "policy-missing";
+              else if (flagLabel === "SECURITY_RISK") flagCss = "waste";
+              tdFlag.innerHTML = '<div class="az-flag-container">' +
+                '<span class="flag-badge az-flag-tag ' + flagCss + '">' + flagLabel.replace("_", " ") + '</span>' +
+                '</div>';
+              tr.appendChild(tdFlag);
+
+              // ── 9. AI ADVISOR ──
+              var tdAi = document.createElement("td");
+              tdAi.innerHTML = '<button class="az-ai-advisor" ' +
+                'data-resource-id="' + escapeHtml(dto.azureId) + '" ' +
+                'data-resource-name="' + escapeHtml(dto.name || "") + '" ' +
+                'onclick="openInsightModal(this)">' +
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+                '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>' +
+                '</svg> AI Insight</button>';
+              tr.appendChild(tdAi);
+
+              tbody.appendChild(tr);
+            });
+          })
+          .catch(function (err) {
+            console.error("[CachedResources] Failed to load table:", err);
+            if (loadingRow) {
+              loadingRow.innerHTML = '<td colspan="9" style="text-align:center;padding:32px 16px;color:var(--az-accent-red)">' +
+                'Fehler beim Laden: ' + escapeHtml(err.message) + '</td>';
+            }
+          });
+      })();
+
+      /* ── AI Modal & existing helpers ─────────────────────────────────────── */
+      const aiModal = document.getElementById("ai-modal");
+      const loadingEl = document.getElementById("modal-loading");
+      const contentEl = document.getElementById("modal-content");
+      const errorEl = document.getElementById("modal-error");
+      const errorMsgEl = document.getElementById("modal-error-msg");
+      const resourceName = document.getElementById("modal-resource-name");
+      const SECRET_MASK = "••••••••••••••••";
+
+      function autoResize(el) {
+        el.style.height = "auto";
+        el.style.height = el.scrollHeight + "px";
+      }
+
+      function openSetupModal() {
+        document.getElementById("setup-modal").classList.add("active");
+        const isDemo = document.body.getAttribute("data-demo-mode") === "true";
+        const demoBtn = document.getElementById("demo-btn");
+        if (demoBtn) {
+          if (isDemo) {
+            demoBtn.textContent = "Exit Demo Mode (Go Live)";
+            demoBtn.style.color = "var(--az-accent-red)";
+            demoBtn.style.borderColor = "var(--az-accent-red)";
+          } else {
+            demoBtn.textContent = "Try Demo Mode (Offline)";
+            demoBtn.style.color = "var(--az-accent-green)";
+            demoBtn.style.borderColor = "var(--az-accent-green)";
+          }
+        }
+
+        fetch("/api/v1/config")
+          .then((r) => {
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            return r.json();
+          })
+          .then((data) => {
+            var tplEl = document.getElementById("ai-template");
+            var instrEl = document.getElementById("ai-instructions");
+
+            // Set placeholder from API (null-safe fallback for older API versions)
+            if (tplEl && data.systemTemplatePlaceholder) {
+              tplEl.placeholder = data.systemTemplatePlaceholder;
+            }
+            if (instrEl && data.specificInstructionsPlaceholder) {
+              instrEl.placeholder = data.specificInstructionsPlaceholder;
+            }
+
+            if (!data || !data.configured) return;
+            if (tplEl) tplEl.value = data.systemTemplate || "";
+            if (instrEl) instrEl.value = data.specificInstructions || "";
+            setTimeout(() => {
+              if (tplEl) autoResize(tplEl);
+              if (instrEl) autoResize(instrEl);
+            }, 50);
+          })
+          .catch((err) =>
+            console.warn("[Settings] Error filling fields:", err.message),
+          );
+      }
+
+      function closeSetupModal() {
+        document.getElementById("setup-modal").classList.remove("active");
+      }
+
+      document
+        .getElementById("credentials-form")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+
+          const saveBtn = document.getElementById("save-btn");
+          const originalBtnText = saveBtn.innerHTML;
+          saveBtn.innerHTML = "Saving...";
+          saveBtn.disabled = true;
+          saveBtn.style.opacity = "0.7";
+          saveBtn.style.cursor = "wait";
+
+          const overlay = document.getElementById("setup-modal");
+          overlay.style.pointerEvents = "none";
+
+          const systemTemplate = document.getElementById("ai-template").value;
+          const specificInstructions =
+            document.getElementById("ai-instructions").value;
+
+          fetch("/api/v1/config")
+            .then((r) => r.json().then((cfg) => ({ ok: r.ok, cfg: cfg })))
+            .then(({ ok, cfg }) => {
+              const SECRET_MASK = "••••••••••••••••";
+              const hasCreds = ok && cfg && cfg.configured;
+              const payload = {
+                tenantId: hasCreds ? cfg.tenantId || "" : "placeholder-tenant",
+                clientId: hasCreds ? cfg.clientId || "" : "placeholder-client",
+                clientSecret: hasCreds ? SECRET_MASK : "",
+                subscriptionId: hasCreds
+                  ? cfg.subscriptionId || ""
+                  : "placeholder-sub",
+                geminiApiKey: hasCreds ? SECRET_MASK : "",
+                systemTemplate: systemTemplate,
+                specificInstructions: specificInstructions,
+              };
+
+              if (!hasCreds) {
+                saveBtn.innerHTML = originalBtnText;
+                saveBtn.disabled = false;
+                saveBtn.style.opacity = "1";
+                saveBtn.style.cursor = "pointer";
+                overlay.style.pointerEvents = "auto";
+                alert(
+                  "Please configure your cloud credentials in Settings \u2192 Advanced first.",
+                );
+                return;
+              }
+
+              return fetch("/api/v1/config", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+              }).then((r) =>
+                r.json().then((body) => ({ ok: r.ok, body: body })),
+              );
+            })
+            .then((result) => {
+              if (!result) return;
+              if (result.ok) {
+                window.location.reload();
+              } else {
+                saveBtn.innerHTML = originalBtnText;
+                saveBtn.disabled = false;
+                saveBtn.style.opacity = "1";
+                saveBtn.style.cursor = "pointer";
+                overlay.style.pointerEvents = "auto";
+                alert("Failed to save AI config.");
+              }
+            })
+            .catch((err) => {
+              saveBtn.innerHTML = originalBtnText;
+              saveBtn.disabled = false;
+              saveBtn.style.opacity = "1";
+              saveBtn.style.cursor = "pointer";
+              overlay.style.pointerEvents = "auto";
+              alert("Network error: " + err.message);
+            });
+        });
+
+      function toggleDemoMode() {
+        const isDemo = document.body.getAttribute("data-demo-mode") === "true";
+        const endpoint = isDemo
+          ? "/api/v1/demo/disable"
+          : "/api/v1/demo/enable";
+        fetch(endpoint, { method: "POST" })
+          .then((r) => r.json())
+          .then(() => window.location.reload())
+          .catch((err) => alert("Failed to toggle demo mode: " + err.message));
+      }
+
+      // Holds the resourceId of the currently open AI Insight modal
+      var currentModalResourceId = null;
+
+      function openInsightModal(btn) {
+        const resourceId = btn.getAttribute("data-resource-id");
+        const name = btn.getAttribute("data-resource-name");
+
+        currentModalResourceId = resourceId;
+
+        document.getElementById("ai-modal").classList.add("active");
+        resourceName.textContent = name;
+        loadingEl.style.display = "block";
+        contentEl.style.display = "none";
+        errorEl.style.display = "none";
+
+        const headers = {};
+        if (document.body.getAttribute("data-demo-mode") === "true")
+          headers["X-Demo-Mode"] = "true";
+
+        fetch(`/api/insight?resourceId=${encodeURIComponent(resourceId)}`, {
+          headers,
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+          })
+          .then((data) => {
+            loadingEl.style.display = "none";
+            renderAnalysisReport(data);
+            // ── Tabellenzeile wird NICHT mehr überschrieben ──
+            //    Die Tabelle bleibt starr auf dem Stand des initialen Caches.
+            contentEl.style.display = "flex";
+          })
+          .catch((err) => {
+            loadingEl.style.display = "none";
+            errorMsgEl.textContent = err.message;
+            errorEl.style.display = "block";
+          });
+      }
+
+      function closeModal() {
+        document.getElementById("ai-modal").classList.remove("active");
+      }
+
+      function renderAnalysisReport(data) {
+        document.getElementById("modal-summary-text").textContent =
+          data.summary || "No analysis available.";
+        document.getElementById("modal-issue-type").textContent =
+          data.issueType || "N/A";
+
+        var savings =
+          data.savingsPotentialUsd != null ? data.savingsPotentialUsd : 0;
+        document.getElementById("modal-savings").textContent =
+          (window.__currencySymbol || "$") + savings.toFixed(2);
+
+        var issueDetectedEl = document.getElementById("modal-issue-detected");
+        issueDetectedEl.style.display = data.issueDetected
+          ? "inline-block"
+          : "none";
+
+        var badge = document.getElementById("modal-severity-badge");
+        badge.textContent = (data.severity || "NONE").toUpperCase();
+        badge.className = "badge-" + (data.severity || "none").toLowerCase();
+
+        renderScripts(data.remediationScripts);
+
+        var recList = document.getElementById("modal-recommendations");
+        recList.innerHTML = "";
+        if (data.recommendations && data.recommendations.length > 0) {
+          data.recommendations.forEach(function (rec) {
+            var li = document.createElement("li");
+            li.textContent = rec;
+            recList.appendChild(li);
+          });
+        } else {
+          recList.innerHTML =
+            '<li style="color:var(--az-text-disabled)">No specific recommendations.</li>';
+        }
+      }
+
+      function renderScripts(remediationScripts) {
+        var tabsContainer = document.getElementById("script-tabs");
+        var panesContainer = document.getElementById("script-panes");
+        var rolesBadge = document.getElementById("roles-badge");
+        var rolesText = document.getElementById("roles-text");
+
+        tabsContainer.innerHTML = "";
+        panesContainer.innerHTML = "";
+
+        if (!remediationScripts) {
+          rolesBadge.style.display = "none";
+          tabsContainer.innerHTML =
+            '<span style="color:var(--az-text-disabled);font-size:12px;">No code options available</span>';
+          return;
+        }
+
+        var roles = remediationScripts.requiredRbacRoles;
+        if (roles && roles.length > 0) {
+          rolesText.textContent = "Required Roles: " + roles.join(", ");
+          rolesBadge.style.display = "inline-flex";
+        } else {
+          rolesBadge.style.display = "none";
+        }
+
+        var languages = [
+          { key: "azureCli", label: "Azure CLI", code: remediationScripts.azureCli },
+          { key: "terraform", label: "Terraform", code: remediationScripts.terraform },
+          { key: "azurePowerShell", label: "PowerShell", code: remediationScripts.azurePowerShell },
+          { key: "bicep", label: "Bicep", code: remediationScripts.bicep }
+        ];
+
+        var hasAny = languages.some(function (l) { return l.code != null; });
+        if (!hasAny) {
+          tabsContainer.innerHTML =
+            '<span style="color:var(--az-text-disabled);font-size:12px;">No reference scripts available</span>';
+          return;
+        }
+
+        var firstActive = -1;
+        languages.forEach(function (lang, idx) {
+          var tabBtn = document.createElement("button");
+          tabBtn.className = "az-script-tab-btn";
+          tabBtn.textContent = lang.label;
+
+          if (lang.code != null) {
+            if (firstActive === -1) {
+              tabBtn.classList.add("az-script-tab-active");
+              firstActive = idx;
+            }
+            tabBtn.onclick = function () {
+              document.querySelectorAll(".az-script-tab-btn").forEach(function (b) {
+                b.classList.remove("az-script-tab-active");
+              });
+              document.querySelectorAll(".az-script-pane").forEach(function (p) {
+                p.classList.remove("az-script-pane-active");
+              });
+              tabBtn.classList.add("az-script-tab-active");
+              document.getElementById("pane-" + lang.key).classList.add("az-script-pane-active");
+            };
+          } else {
+            tabBtn.disabled = true;
+            tabBtn.classList.add("az-script-tab-disabled");
+          }
+          tabsContainer.appendChild(tabBtn);
+
+          var pane = document.createElement("div");
+          pane.className = "az-script-pane";
+          pane.id = "pane-" + lang.key;
+          if (idx === firstActive) pane.classList.add("az-script-pane-active");
+
+          if (lang.code != null) {
+            var header = document.createElement("div");
+            header.className = "az-script-pane-header";
+
+            var descSpan = document.createElement("span");
+            descSpan.className = "az-script-pane-label";
+            descSpan.textContent = lang.label;
+
+            var copyBtn = document.createElement("button");
+            copyBtn.className = "az-copy-btn";
+            copyBtn.textContent = "Copy";
+            copyBtn.title = "Copy to clipboard";
+            copyBtn.onclick = function () {
+              navigator.clipboard.writeText(lang.code).then(function () {
+                copyBtn.textContent = "Copied!";
+                copyBtn.classList.add("az-copy-btn-done");
+                setTimeout(function () {
+                  copyBtn.textContent = "Copy";
+                  copyBtn.classList.remove("az-copy-btn-done");
+                }, 2000);
+              }).catch(function () {
+                copyBtn.textContent = "Failed";
+                setTimeout(function () {
+                  copyBtn.textContent = "Copy";
+                }, 2000);
+              });
+            };
+
+            header.appendChild(descSpan);
+            header.appendChild(copyBtn);
+            pane.appendChild(header);
+
+            var pre = document.createElement("pre");
+            pre.className = "az-code-box";
+            var code = document.createElement("code");
+            code.textContent = lang.code;
+            pre.appendChild(code);
+            pane.appendChild(pre);
+          }
+
+          panesContainer.appendChild(pane);
+        });
+      }
+
+      function updateTableFlag(resourceId, issueType, savingsPotentialUsd) {
+        var row = document.querySelector(
+          'tr[data-resource-id="' + resourceId + '"]',
+        );
+        if (!row) return;
+        var flagCell = row.querySelector(".flag-cell");
+        if (!flagCell) return;
+        var badge = flagCell.querySelector(".flag-badge");
+        if (!badge) return;
+
+        var label = "HEALTHY";
+        var cssClass = "flag-badge az-flag-tag healthy";
+
+        if (issueType === "HEALTHY") {
+          label = "HEALTHY";
+          cssClass = "flag-badge az-flag-tag healthy";
+        } else if (issueType === "ORPHANED") {
+          label = "ORPHANED";
+          cssClass = "flag-badge az-flag-tag orphaned";
+        } else if (
+          issueType === "GOVERNANCE_MISSING" &&
+          (savingsPotentialUsd == null || savingsPotentialUsd <= 0.01)
+        ) {
+          label = "POLICY MISSING";
+          cssClass = "flag-badge az-flag-tag policy-missing";
+        } else {
+          label =
+            issueType === "COST_OPTIMIZATION" ||
+            issueType === "OVERPROVISIONED" ||
+            issueType === "UNDERUTILIZED"
+              ? "WASTE"
+              : issueType;
+          cssClass = "flag-badge az-flag-tag waste";
+        }
+
+        badge.textContent = label;
+        badge.className = cssClass;
+      }
+
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          closeModal();
+          closeSetupModal();
+          closeProfileMenu();
+        }
+      });
+
+      function toggleProfileMenu(event) {
+        event.stopPropagation();
+        var dropdown = document.getElementById("profile-dropdown");
+        if (dropdown) {
+          dropdown.classList.toggle("active");
+        }
+      }
+
+      function closeProfileMenu() {
+        var dropdown = document.getElementById("profile-dropdown");
+        if (dropdown) {
+          dropdown.classList.remove("active");
+        }
+      }
+
+      document.addEventListener("click", function (event) {
+        var container = document.querySelector(".az-profile-container");
+        var dropdown = document.getElementById("profile-dropdown");
+        if (
+          dropdown &&
+          dropdown.classList.contains("active") &&
+          container &&
+          !container.contains(event.target)
+        ) {
+          dropdown.classList.remove("active");
+        }
+      });
+
+      // ── Notification Bell ────────────────────────────────────────────────
+      var notifOpen = false;
+
+      function toggleNotifDropdown(event) {
+        event.stopPropagation();
+        var dropdown = document.getElementById("notif-dropdown");
+        notifOpen = !notifOpen;
+        dropdown.classList.toggle("active", notifOpen);
+      }
+
+      document.addEventListener("click", function (e) {
+        if (notifOpen) {
+          var container = document.getElementById("notif-container");
+          if (container && !container.contains(e.target)) {
+            document
+              .getElementById("notif-dropdown")
+              .classList.remove("active");
+            notifOpen = false;
+          }
+        }
+      });
+
+      function renderNotifications(notifications) {
+        var badge = document.getElementById("notif-badge");
+        var list = document.getElementById("notif-list");
+        var empty = document.getElementById("notif-empty");
+        var markBtn = document.getElementById("notif-mark-read");
+
+        if (!notifications || notifications.length === 0) {
+          badge.style.display = "none";
+          markBtn.style.display = "none";
+          if (empty) empty.style.display = "block";
+          return;
+        }
+
+        badge.textContent =
+          notifications.length > 9 ? "9+" : notifications.length;
+        badge.style.display = "flex";
+        markBtn.style.display = "inline-block";
+        if (empty) empty.style.display = "none";
+
+        // Remove existing notification items (keep the empty placeholder)
+        list.querySelectorAll(".az-notif-item").forEach(function (el) {
+          el.remove();
+        });
+
+        notifications.forEach(function (n) {
+          var item = document.createElement("div");
+          item.className = "az-notif-item";
+
+          var ts = new Date(n.createdAt);
+          var timeStr = ts.toLocaleString("de-DE", {
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          item.innerHTML =
+            '<div class="az-notif-item-title">' +
+            escapeHtml(n.title) +
+            "</div>" +
+            '<div class="az-notif-item-msg">' +
+            escapeHtml(n.message) +
+            "</div>" +
+            '<div class="az-notif-item-time">' +
+            timeStr +
+            "</div>";
+          list.appendChild(item);
+        });
+      }
+
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function markNotificationsRead() {
+        fetch("/api/notifications/mark-read", { method: "POST" })
+          .then(function () {
+            renderNotifications([]);
+            document
+              .getElementById("notif-dropdown")
+              .classList.remove("active");
+            notifOpen = false;
+          })
+          .catch(function (err) {
+            console.warn("[Notifications] mark-read failed:", err);
+          });
+      }
+
+      // Fetch unread notifications on page load
+      (function loadNotifications() {
+        fetch("/api/notifications/unread")
+          .then(function (r) {
+            return r.ok ? r.json() : [];
+          })
+          .then(function (data) {
+            renderNotifications(data);
+          })
+          .catch(function (err) {
+            console.warn("[Notifications] fetch failed:", err);
+          });
+      })();
+
+      /* ── Global Search: Live-Filter der Resource-Tabelle ── */
+      function debounce(fn, delay) {
+        var timer;
+        return function () {
+          var context = this,
+            args = arguments;
+          clearTimeout(timer);
+          timer = setTimeout(function () {
+            fn.apply(context, args);
+          }, delay);
+        };
+      }
+
+      (function initGlobalSearch() {
+        var input = document.getElementById("globalSearchInput");
+        var tbody = document.getElementById("resourceTableBody");
+        var noResultsRow = document.getElementById("noResultsRow");
+        var noResultsText = document.getElementById("noResultsText");
+        if (!input || !tbody) return;
+
+        input.addEventListener(
+          "input",
+          debounce(function () {
+            var query = input.value.trim().toLowerCase();
+            var rows = tbody.querySelectorAll("tr:not(#noResultsRow)");
+            var visibleCount = 0;
+
+            rows.forEach(function (tr) {
+              var text = tr.textContent.toLowerCase();
+              if (!query || text.indexOf(query) !== -1) {
+                tr.style.display = "";
+                visibleCount++;
+              } else {
+                tr.style.display = "none";
+              }
+            });
+
+            if (noResultsRow && noResultsText) {
+              if (query && visibleCount === 0) {
+                noResultsText.textContent =
+                  "No resources found matching '" + query + "'";
+                noResultsRow.style.display = "";
+              } else {
+                noResultsRow.style.display = "none";
+              }
+            }
+          }, 300),
+        );
+      })();
+
+      /* ── Column Resizer ── */
+      document.addEventListener("DOMContentLoaded", function () {
+        var resizers = document.querySelectorAll(".resizer");
+        var currentTh = null;
+        var startX, startWidth;
+
+        resizers.forEach(function (resizer) {
+          resizer.addEventListener("mousedown", function (e) {
+            currentTh = resizer.closest("th");
+            startX = e.pageX;
+            startWidth = currentTh.offsetWidth;
+            document.addEventListener("mousemove", mouseMoveHandler);
+            document.addEventListener("mouseup", mouseUpHandler);
+            resizer.classList.add("resizing");
+          });
+        });
+
+        function mouseMoveHandler(e) {
+          if (!currentTh) return;
+          var newWidth = Math.max(50, startWidth + (e.pageX - startX));
+          currentTh.style.width = newWidth + "px";
+          currentTh.style.minWidth = newWidth + "px";
+          currentTh.style.maxWidth = newWidth + "px";
+
+          var table = currentTh.closest("table");
+          var colIndex = Array.prototype.indexOf.call(
+            currentTh.parentNode.children,
+            currentTh,
+          );
+          var rows = table.querySelectorAll("tbody tr");
+
+          rows.forEach(function (row) {
+            var cell = row.children[colIndex];
+            if (cell) {
+              cell.style.width = newWidth + "px";
+              cell.style.minWidth = newWidth + "px";
+              cell.style.maxWidth = newWidth + "px";
+              // Set overflow and text-overflow so newly resized columns truncate correctly
+              cell.style.overflow = "hidden";
+              cell.style.textOverflow = "ellipsis";
+              cell.style.whiteSpace = "nowrap";
+            }
+          });
+        }
+
+        function mouseUpHandler() {
+          var activeResizer = document.querySelector(".resizer.resizing");
+          if (activeResizer) activeResizer.classList.remove("resizing");
+          document.removeEventListener("mousemove", mouseMoveHandler);
+          document.removeEventListener("mouseup", mouseUpHandler);
+          currentTh = null;
+        }
+      });
+    </script>
+  </body>
+</html>

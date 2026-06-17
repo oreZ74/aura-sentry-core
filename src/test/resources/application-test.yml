@@ -1,0 +1,44 @@
+# ══════════════════════════════════════════════════
+# Test profile – overrides for integration tests.
+# The PostgreSQL datasource is auto-configured by
+# AbstractIntegrationTest via @ServiceConnection.
+# ══════════════════════════════════════════════════
+
+spring:
+  application:
+    name: aura-sentry-core-test
+
+  # JPA / Hibernate – safe schema handling for tests
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+  # Flyway disabled for tests – Hibernate handles DDL via create-drop
+  flyway:
+    enabled: false
+
+# ──────────────────────────────────────────────
+# Dummy credentials – Azure & Gemini won't be
+# called from tests, but the beans must start.
+# ──────────────────────────────────────────────
+azure:
+  tenant-id: 00000000-0000-0000-0000-000000000000
+  client-id: 00000000-0000-0000-0000-000000000000
+  client-secret: dummy-secret-for-tests
+  subscription-id: 00000000-0000-0000-0000-000000000000
+
+gemini:
+  api-key: dummy-gemini-key-for-tests
+  model:
+    id: gemini-test
+
+# ──────────────────────────────────────────────
+# Security – test admin password
+# ──────────────────────────────────────────────
+app:
+  password: admin
+  encryption:
+    # EXACTLY 32 bytes when Base64-decoded (AES-256-GCM requirement).
+    # Decoded value: "this-is-a-test-key-for-32-bytes!" (32 ASCII bytes)
+    key: dGhpcy1pcy1hLXRlc3Qta2V5LWZvci0zMi1ieXRlcyE=

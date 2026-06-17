@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head></head>
+<body>
+    <header th:fragment="navbar" class="az-navbar">
+        <div class="az-brand">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5.483 21.3H24L14.025 4.013l-3.3 5.728 5.62 9.774H7.135l-1.652 1.785z" fill="#ffffff"/>
+                <path d="M13.23 2.7L0 21.3h5.483L14.025 4.013 13.23 2.7z" fill="#e1f5fe"/>
+            </svg>
+            <span>Microsoft Azure</span>
+            <span style="color: var(--az-nav-text); opacity: 0.7;">|</span>
+            <span>AuraSentry</span>
+        </div>
+        <div class="az-search-container" th:if="${currentPage != 'settings'}">
+            <input id="globalSearchInput" type="text" class="az-search-bar" placeholder="Ressourcen, Dienste und Dokumente durchsuchen...">
+        </div>
+        <div class="az-nav-actions">
+            <!-- ── Notification Bell ── -->
+            <div class="az-notif-container" id="notif-container">
+                <button class="az-notif-btn" id="notif-btn" onclick="toggleNotifDropdown(event)" aria-label="Benachrichtigungen">
+                    <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" style="color: var(--az-nav-text);"><path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zM8 1.918l-.797.161A4.002 4.002 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4.002 4.002 0 0 0-3.203-3.92L8 1.917z"/></svg>
+                    <span class="az-notif-badge" id="notif-badge" style="display:none;">0</span>
+                </button>
+                <div class="az-notif-dropdown" id="notif-dropdown">
+                    <div class="az-notif-header">
+                        <span>Benachrichtigungen</span>
+                        <button class="az-notif-mark-read" id="notif-mark-read" onclick="markNotificationsRead()" style="display:none;">Als gelesen markieren</button>
+                    </div>
+                    <div class="az-notif-list" id="notif-list">
+                        <div class="az-notif-empty" id="notif-empty">Keine neuen Benachrichtigungen</div>
+                    </div>
+                </div>
+            </div>
+            <th:block th:if="${currentUser != null}">
+                <div class="az-profile-container" onclick="toggleProfileMenu(event)">
+                    <div class="az-profile-circle" th:text="${currentUser.initials}">US</div>
+                    <span class="az-profile-name" th:text="${currentUser.fullName}">User</span>
+                </div>
+                <div class="az-profile-dropdown" id="profile-dropdown">
+                    <div class="az-profile-dropdown-header">
+                        <div class="az-profile-dropdown-avatar" th:text="${currentUser.initials}">US</div>
+                        <div>
+                            <div class="az-profile-dropdown-name" th:text="${currentUser.fullName}">User</div>
+                            <div class="az-profile-dropdown-email" th:text="${currentUser.email}">user@aurasentry.local</div>
+                        </div>
+                    </div>
+                    <a href="/" class="az-profile-dropdown-item">
+                        <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
+                        Dashboard
+                    </a>
+                    <a href="/settings" class="az-profile-dropdown-item">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.10001.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.86z"/></svg>
+                        User Settings
+                    </a>
+                    <th:block th:if="${!activeAccounts.isEmpty()}">
+                        <div class="az-profile-dropdown-divider"></div>
+                        <div class="az-profile-dropdown-section-title">Manage Accounts</div>
+                        <a th:each="account : ${activeAccounts}"
+                           th:href="@{/switch-account(email=${account.email})}"
+                           class="az-profile-dropdown-account"
+                           th:classappend="${currentUser.email == account.email} ? 'active-account'">
+                            <div class="az-profile-dropdown-account-avatar" th:text="${account.initials}">US</div>
+                            <div class="az-profile-dropdown-account-info">
+                                <div class="az-profile-dropdown-account-name" th:text="${account.fullName}">User</div>
+                                <div class="az-profile-dropdown-account-email" th:text="${account.email}">user@aurasentry.local</div>
+                            </div>
+                            <span class="az-profile-dropdown-check" th:if="${currentUser.email == account.email}">&check;</span>
+                        </a>
+                    </th:block>
+                    <div class="az-profile-dropdown-divider"></div>
+                    <form th:action="@{/logout}" method="post">
+                        <button type="submit" class="az-profile-dropdown-item az-profile-dropdown-logout">
+                            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd"/></svg>
+                            Sign out
+                        </button>
+                    </form>
+                </div>
+            </th:block>
+        </div>
+    </header>
+</body>
+</html>
