@@ -2,7 +2,8 @@ name: Build and Deploy to Prod
 
 on:
   push:
-    branches: [ "main" ] # Triggert nur bei einem Push auf den main-Branch
+    branches: ["main"] # Triggert nur bei einem Push auf den main-Branch
+  workflow_dispatch:
 
 jobs:
   build-and-push:
