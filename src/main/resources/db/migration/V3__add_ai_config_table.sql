@@ -1,4 +1,6 @@
--- V3: Add ai_config table for user-customizable AI prompt templates
+-- ═══════════════════════════════════════════════════════════════════
+-- V3 – Add ai_config table for user-customizable AI prompt templates
+-- ═══════════════════════════════════════════════════════════════════
 
 CREATE TABLE IF NOT EXISTS ai_config (
     id                    BIGSERIAL PRIMARY KEY,

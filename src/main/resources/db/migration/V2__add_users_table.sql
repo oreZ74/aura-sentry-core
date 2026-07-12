@@ -6,7 +6,7 @@
 -- ───────────────────────────────────────────────────────────────────
 -- users – application user accounts
 -- ───────────────────────────────────────────────────────────────────
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id         BIGSERIAL    PRIMARY KEY,
     username   VARCHAR(100) NOT NULL UNIQUE,
     password   VARCHAR(255) NOT NULL,
@@ -18,10 +18,18 @@ CREATE TABLE users (
 -- ───────────────────────────────────────────────────────────────────
 -- cloud_credentials – add user_id foreign key
 -- ───────────────────────────────────────────────────────────────────
-ALTER TABLE cloud_credentials
-    ADD COLUMN user_id BIGINT NOT NULL REFERENCES users(id);
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'cloud_credentials') THEN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                       WHERE table_name = 'cloud_credentials' AND column_name = 'user_id') THEN
+            ALTER TABLE cloud_credentials
+                ADD COLUMN user_id BIGINT NOT NULL REFERENCES users(id);
+        END IF;
+    END IF;
+END $$;
 
-CREATE INDEX idx_cloud_creds_user_id ON cloud_credentials(user_id);
+CREATE INDEX IF NOT EXISTS idx_cloud_creds_user_id ON cloud_credentials(user_id);
 
 -- ───────────────────────────────────────────────────────────────────
 -- Seed the initial admin user (password from APP_PASSWORD env var

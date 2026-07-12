@@ -3,7 +3,7 @@
 --       eager cost refresh and upsert semantics.
 -- ═══════════════════════════════════════════════════════════════════
 
-CREATE TABLE resource_cache (
+CREATE TABLE IF NOT EXISTS resource_cache (
     id              BIGSERIAL       PRIMARY KEY,
     azure_id        VARCHAR(512)    NOT NULL UNIQUE,
     name            VARCHAR(255)    NOT NULL,
@@ -18,6 +18,6 @@ CREATE TABLE resource_cache (
     updated_at      TIMESTAMPTZ
 );
 
-CREATE INDEX idx_resource_cache_azure_id   ON resource_cache(azure_id);
-CREATE INDEX idx_resource_cache_scanned_at ON resource_cache(scanned_at DESC);
-CREATE INDEX idx_resource_cache_flag       ON resource_cache(flag);
+CREATE INDEX IF NOT EXISTS idx_resource_cache_azure_id   ON resource_cache(azure_id);
+CREATE INDEX IF NOT EXISTS idx_resource_cache_scanned_at ON resource_cache(scanned_at DESC);
+CREATE INDEX IF NOT EXISTS idx_resource_cache_flag       ON resource_cache(flag);

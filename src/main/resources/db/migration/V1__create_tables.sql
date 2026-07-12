@@ -10,7 +10,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- cloud_credentials – encrypted Azure & Gemini API credentials
 -- (explicit @Column names, independent of naming strategy)
 -- ───────────────────────────────────────────────────────────────────
-CREATE TABLE cloud_credentials (
+CREATE TABLE IF NOT EXISTS cloud_credentials (
     id               BIGSERIAL    PRIMARY KEY,
     tenant_id        VARCHAR(512)  NOT NULL,
     client_id        VARCHAR(512)  NOT NULL,
@@ -25,7 +25,7 @@ CREATE TABLE cloud_credentials (
 -- scan_results – persisted Azure resource scan snapshots
 -- (SpringPhysicalNamingStrategy converts camelCase → snake_case)
 -- ───────────────────────────────────────────────────────────────────
-CREATE TABLE scan_results (
+CREATE TABLE IF NOT EXISTS scan_results (
     id             UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
     scanned_at     TIMESTAMPTZ  NOT NULL,
     resource_id    VARCHAR(255) NOT NULL,
@@ -38,7 +38,7 @@ CREATE TABLE scan_results (
 -- ───────────────────────────────────────────────────────────────────
 -- scan_findings – individual optimisation flags per scan
 -- ───────────────────────────────────────────────────────────────────
-CREATE TABLE scan_findings (
+CREATE TABLE IF NOT EXISTS scan_findings (
     id             UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
     flag           VARCHAR(255) NOT NULL,
     reason         VARCHAR(1000) NOT NULL,
@@ -50,6 +50,6 @@ CREATE TABLE scan_findings (
 -- ───────────────────────────────────────────────────────────────────
 -- Indexes for common query patterns
 -- ───────────────────────────────────────────────────────────────────
-CREATE INDEX idx_scan_results_scanned_at ON scan_results(scanned_at DESC);
-CREATE INDEX idx_scan_findings_result_id  ON scan_findings(scan_result_id);
-CREATE INDEX idx_cloud_creds_updated_at   ON cloud_credentials(updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_scan_results_scanned_at ON scan_results(scanned_at DESC);
+CREATE INDEX IF NOT EXISTS idx_scan_findings_result_id  ON scan_findings(scan_result_id);
+CREATE INDEX IF NOT EXISTS idx_cloud_creds_updated_at   ON cloud_credentials(updated_at DESC);
