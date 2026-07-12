@@ -4,5 +4,5 @@
 -- ═══════════════════════════════════════════════════════════════════
 
 ALTER TABLE users
-    ADD COLUMN full_name VARCHAR(255),
-    ADD COLUMN email     VARCHAR(255);
+ADD COLUMN IF NOT EXISTS full_name VARCHAR(255),
+ADD COLUMN IF NOT EXISTS email VARCHAR(255);

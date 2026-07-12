@@ -4,4 +4,4 @@
 -- ═══════════════════════════════════════════════════════════════════
 
 ALTER TABLE scan_results
-    ADD COLUMN ai_locked BOOLEAN NOT NULL DEFAULT FALSE;
+ADD COLUMN IF NOT EXISTS ai_locked BOOLEAN NOT NULL DEFAULT FALSE;
