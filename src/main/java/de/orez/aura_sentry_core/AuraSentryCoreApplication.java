@@ -1,5 +1,6 @@
 package de.orez.aura_sentry_core;
 
+import de.orez.aura_sentry_core.config.FlywayMigrationRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
@@ -22,7 +23,9 @@ public class AuraSentryCoreApplication {
     }
 
     public static void main(String[] args) {
-        SpringApplication.run(AuraSentryCoreApplication.class, args);
+        SpringApplication app = new SpringApplication(AuraSentryCoreApplication.class);
+        app.addListeners(new FlywayMigrationRunner());
+        app.run(args);
         logger.info("[AuraSentry] Application started successfully");
     }
 
