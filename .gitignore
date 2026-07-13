@@ -43,3 +43,6 @@ ansible/group_vars/secrets.yml
 
 # OpenCode configuration files
 .opencode/
+
+# Database Backups
+/backups/
