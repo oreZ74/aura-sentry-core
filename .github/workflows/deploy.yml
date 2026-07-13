@@ -38,7 +38,9 @@ jobs:
           push: true
           platforms: linux/arm64
           # Uses your lowercase GitHub username secret to prevent Docker registry naming errors
-          tags: ghcr.io/${{ secrets.GH_USERNAME }}/aura-sentry-core:latest
+          tags: |
+            ghcr.io/${{ secrets.GH_USERNAME }}/aura-sentry-core:latest
+            ghcr.io/${{ secrets.GH_USERNAME }}/aura-sentry-core:${{ github.sha }}
 
   deploy:
     needs: build-and-push
