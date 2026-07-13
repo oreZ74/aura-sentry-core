@@ -1,5 +1,6 @@
 networks:
   aura-net:
+    driver: bridge
 
 services:
   postgres:
@@ -7,7 +8,7 @@ services:
       - aura-net
 
   app:
-    image: ghcr.io/${GITHUB_REPOSITORY}:latest
+    image: ghcr.io/${GITHUB_REPOSITORY:?err}:latest
     build: .
     container_name: aurasentry-app
     restart: always
@@ -16,41 +17,41 @@ services:
         condition: service_healthy
     environment:
       _JAVA_OPTIONS: "-Djava.net.preferIPv4Stack=true"
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-      AZURE_CLIENT_ID: ${AZURE_CLIENT_ID}
-      AZURE_CLIENT_SECRET: ${AZURE_CLIENT_SECRET}
-      AZURE_TENANT_ID: ${AZURE_TENANT_ID}
-      AZURE_SUBSCRIPTION_ID: ${AZURE_SUBSCRIPTION_ID}
-      APP_PASSWORD: ${APP_PASSWORD}
-      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY}
-      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-aurasentry}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-aurasentry}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?err}
+      AZURE_CLIENT_ID: ${AZURE_CLIENT_ID:?err}
+      AZURE_CLIENT_SECRET: ${AZURE_CLIENT_SECRET:?err}
+      AZURE_TENANT_ID: ${AZURE_TENANT_ID:?err}
+      AZURE_SUBSCRIPTION_ID: ${AZURE_SUBSCRIPTION_ID:?err}
+      APP_PASSWORD: ${APP_PASSWORD:?err}
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?err}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?err}
       POSTGRES_PORT: "5432"
       SPRING_PROFILES_ACTIVE: prod
     ports:
       - "8080:8080"
     networks:
       - aura-net
+
   pgbackups:
     image: prodrigestivill/postgres-backup-local:latest
     container_name: aurasentry-pgbackups
     restart: always
     volumes:
-      # Speichert die Backups direkt in deinem Projektordner auf dem Server
       - ./backups:/backups
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     environment:
-      - POSTGRES_HOST=postgres
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      # Backup-Zeitplan: Jeden Tag um 03:00 Uhr nachts
-      - SCHEDULE=0 3 * * *
-      # Wie lange sollen Backups behalten werden? (Best Practice Retention)
-      - BACKUP_KEEP_DAYS=7
-      - BACKUP_KEEP_WEEKS=4
-      - BACKUP_KEEP_MONTHS=2
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-aurasentry}
+      POSTGRES_USER: ${POSTGRES_USER:-aurasentry}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?err}
+      SCHEDULE: ${BACKUP_SCHEDULE:-0 3 * * *}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-7}
+      BACKUP_KEEP_WEEKS: ${BACKUP_KEEP_WEEKS:-4}
+      BACKUP_KEEP_MONTHS: ${BACKUP_KEEP_MONTHS:-2}
+      HEALTHCHECK_PORT: 8080
     networks:
       - aura-net
